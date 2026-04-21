@@ -1,0 +1,155 @@
+DROP DATABASE IF EXISTS travel_db;
+CREATE DATABASE travel_db;
+USE travel_db;
+
+-- ============================================================
+-- USERS (password column added for login/register)
+-- ============================================================
+CREATE TABLE Users (
+    user_id   INT PRIMARY KEY AUTO_INCREMENT,
+    name      VARCHAR(100),
+    email     VARCHAR(100) UNIQUE,
+    password  VARCHAR(100)
+);
+
+-- ============================================================
+-- FLIGHTS
+-- ============================================================
+CREATE TABLE Flights (
+    flight_id   INT PRIMARY KEY AUTO_INCREMENT,
+    airline     VARCHAR(100),
+    source      VARCHAR(50),
+    destination VARCHAR(50),
+    price       DECIMAL(10,2)
+);
+
+-- ============================================================
+-- HOTELS
+-- ============================================================
+CREATE TABLE Hotels (
+    hotel_id        INT PRIMARY KEY AUTO_INCREMENT,
+    hotel_name      VARCHAR(100),
+    location        VARCHAR(100),
+    price_per_night DECIMAL(10,2)
+);
+
+-- ============================================================
+-- BOOKINGS
+-- ============================================================
+CREATE TABLE Bookings (
+    booking_id   INT PRIMARY KEY AUTO_INCREMENT,
+    user_id      INT,
+    booking_date DATETIME,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id)
+);
+
+-- ============================================================
+-- FLIGHT BOOKINGS
+-- ============================================================
+CREATE TABLE Flight_Bookings (
+    id         INT PRIMARY KEY AUTO_INCREMENT,
+    booking_id INT,
+    flight_id  INT,
+    FOREIGN KEY (booking_id) REFERENCES Bookings(booking_id),
+    FOREIGN KEY (flight_id)  REFERENCES Flights(flight_id)
+);
+
+-- ============================================================
+-- HOTEL BOOKINGS
+-- ============================================================
+CREATE TABLE Hotel_Bookings (
+    id         INT PRIMARY KEY AUTO_INCREMENT,
+    booking_id INT,
+    hotel_id   INT,
+    check_in   DATE,
+    check_out  DATE,
+    FOREIGN KEY (booking_id) REFERENCES Bookings(booking_id),
+    FOREIGN KEY (hotel_id)   REFERENCES Hotels(hotel_id)
+);
+
+-- ============================================================
+-- LOYALTY
+-- ============================================================
+CREATE TABLE Loyalty (
+    user_id INT,
+    points  INT,
+    tier    VARCHAR(50),
+    FOREIGN KEY (user_id) REFERENCES Users(user_id)
+);
+
+-- ============================================================
+-- BOOKING HISTORY
+-- ============================================================
+CREATE TABLE BookingHistory (
+    id          INT PRIMARY KEY AUTO_INCREMENT,
+    booking_id  INT,
+    status      VARCHAR(50),
+    change_time DATETIME,
+    FOREIGN KEY (booking_id) REFERENCES Bookings(booking_id)
+);
+
+-- ============================================================
+-- SAMPLE DATA
+-- ============================================================
+INSERT INTO Users (name, email, password) VALUES
+('Shubh Sharma', 'shubh@email.com', 'Pass@123'),
+('Priya Mehta',  'priya@email.com', 'Pass@123'),
+('Arjun Verma',  'arjun@email.com', 'Pass@123');
+
+INSERT INTO Flights (airline, source, destination, price) VALUES
+('IndiGo',    'Delhi',   'Mumbai',    3500.00),
+('Air India', 'Mumbai',  'Bangalore', 4200.00),
+('SpiceJet',  'Delhi',   'Goa',       2900.00),
+('Vistara',   'Chennai', 'Delhi',     5100.00),
+('GoFirst',   'Kolkata', 'Hyderabad', 3800.00);
+
+INSERT INTO Hotels (hotel_name, location, price_per_night) VALUES
+('The Taj Mahal Palace', 'Mumbai',    12000.00),
+('Lemon Tree Hotel',     'Delhi',      3500.00),
+('ITC Gardenia',         'Bangalore',  8000.00),
+('Novotel Goa',          'Goa',        6500.00),
+('Hyatt Regency',        'Chennai',    7200.00);
+
+INSERT INTO Loyalty (user_id, points, tier) VALUES
+(1, 1500, 'Gold'),
+(2,  800, 'Silver'),
+(3,  200, 'Bronze');
+
+-- ============================================================
+-- QUERIES USED BY THE PYTHON APP (for reference)
+-- ============================================================
+
+-- 1. LOGIN
+SELECT * FROM Users WHERE email='shubh@email.com' AND password='Pass@123';
+
+-- 2. REGISTER
+INSERT INTO Users (name, email, password) VALUES ('Test User', 'test@email.com', 'Pass@123');
+
+-- 3. SHOW ALL FLIGHTS (flight listing screen)
+SELECT * FROM Flights;
+
+-- 4. SHOW ALL HOTELS (hotel listing screen)
+SELECT * FROM Hotels;
+
+-- 5. BOOK A FLIGHT
+INSERT INTO Bookings (user_id, booking_date) VALUES (1, NOW());
+INSERT INTO Flight_Bookings (booking_id, flight_id) VALUES (LAST_INSERT_ID(), 1);
+
+-- 6. BOOK A HOTEL
+INSERT INTO Bookings (user_id, booking_date) VALUES (1, NOW());
+INSERT INTO Hotel_Bookings (booking_id, hotel_id, check_in, check_out)
+VALUES (LAST_INSERT_ID(), 2, '2025-05-01', '2025-05-05');
+
+-- 7. MY BOOKINGS PAGE (the big JOIN query)
+SELECT b.booking_id, f.airline, f.source, f.destination,
+       h.hotel_name, h.location, hb.check_in, hb.check_out, b.booking_date
+FROM Bookings b
+LEFT JOIN Flight_Bookings fb ON b.booking_id = fb.booking_id
+LEFT JOIN Flights f          ON fb.flight_id = f.flight_id
+LEFT JOIN Hotel_Bookings hb  ON b.booking_id = hb.booking_id
+LEFT JOIN Hotels h           ON hb.hotel_id  = h.hotel_id
+WHERE b.user_id = 1
+ORDER BY b.booking_date DESC;
+
+-- 8. GET USERNAME (used in dashboard/topbar)
+SELECT name FROM Users WHERE user_id = 1;
